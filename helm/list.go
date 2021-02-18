@@ -9,11 +9,13 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 )
 
+//ListConfig list configuration
 type ListConfig struct {
 	AllNamespaces bool
 	All           bool
 }
 
+//List execute helm list
 func List() ([]*release.Release, error) {
 	config := ListConfig{
 		AllNamespaces: true,

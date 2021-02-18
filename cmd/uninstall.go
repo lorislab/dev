@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//CmdEnvInstall environment install command
-func CmdEnvInstall() *cobra.Command {
+//EnvUninstall environment uninstall command
+func EnvUninstall() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "uninstall",

@@ -9,8 +9,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-//CmdEnv environment commands
-func CmdEnv() *cobra.Command {
+//Env environment commands
+func Env() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "env",
@@ -20,8 +20,9 @@ func CmdEnv() *cobra.Command {
 
 	addFlag(cmd, "env-config", "e", "env.yaml", "Environment configuration")
 
-	addChildCmd(cmd, CmdEnvSync())
-	addChildCmd(cmd, CmdEnvStatus())
+	addChildCmd(cmd, EnvSync())
+	addChildCmd(cmd, EnvStatus())
+	addChildCmd(cmd, EnvUninstall())
 	return cmd
 }
 

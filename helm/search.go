@@ -18,6 +18,7 @@ const searchMaxScore = 25
 
 var settings = cli.New()
 
+//Search helm search
 func Search() ([]*search.Result, error) {
 	var args []string
 	o := &helmSearch{}
@@ -139,5 +140,3 @@ func (o *helmSearch) applyConstraint(res []*search.Result) ([]*search.Result, er
 func isNotExist(err error) bool {
 	return os.IsNotExist(errors.Cause(err))
 }
-
-

@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//CmdEnvStatus environment status command
-func CmdEnvStatus() *cobra.Command {
+//EnvStatus environment status command
+func EnvStatus() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "status",

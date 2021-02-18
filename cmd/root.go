@@ -70,7 +70,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/."+name+".yaml)")
 	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", zerolog.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
 
-	rootCmd.AddCommand(CmdEnv())
+	rootCmd.AddCommand(Env())
 }
 
 func initConfig() {

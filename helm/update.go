@@ -8,6 +8,7 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
+//Update helm update
 func Update() {
 
 	o := &helmUpdate{

@@ -6,7 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CmdEnvSync() *cobra.Command {
+//EnvSync create environment sync command
+func EnvSync() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "sync",

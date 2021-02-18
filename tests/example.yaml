@@ -1,0 +1,75 @@
+cluster:
+  namespace: test
+apps:
+  before:
+    tags:
+      - before
+    priority: -10
+    helm:
+      version: ">=0.0.0-0"
+      chart: before
+      repo: file://./before
+  after:
+    tags:
+      - after
+    priority: 100
+    helm:
+      version: ">=0.0.0-0"
+      chart: after
+      repo: file://./after
+      values:
+        routes:
+          ping-quarkus: {}
+          adminer: {}
+  adminer:
+    tags:
+      - infra  
+    priority: -5
+    helm:
+      version: ">=0.0.0-0"
+      chart: adminer
+      repo: alias:1000kit
+      values:
+        routing:
+          enabled: false
+  db-keycloak:
+    tags:
+      - infra  
+    priority: -5
+    helm:  
+      version: "3.4.0"
+      chart: postgresql
+      repo: alias:1000kit
+      values:
+        routing:
+          enabled: false
+        postgresql:
+          global:
+            postgresql:
+              postgresqlDatabase: "keycloak"
+              postgresqlUsername:
+              postgresqlPassword: "keycloak"
+          securityContext:
+            enabled: true
+          volumePermissions:
+            enabled: true
+            securityContext:
+              runAsUser: 0
+          shmVolume:
+            enabled: true
+            chmod:
+              enabled: true    
+  ping-quarkus:
+    tags:
+      - tests
+    helm:
+      chart: ping-quarkus
+      repo: alias:1000kit
+      version: ">=0.0.0-0"
+      values:
+        test: value
+        app:
+          env:
+            TEST: example-variable
+      files:
+        - config/ping-quarkus.yaml

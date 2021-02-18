@@ -27,22 +27,18 @@ func Env() *cobra.Command {
 }
 
 type envFlags struct {
-	File string `mapstructure:"env-config"`
-}
-
-type appFlags struct {
-	Env        envFlags `mapstructure:",squash"`
+	File       string   `mapstructure:"env-config"`
 	Apps       []string `mapstructure:"app"`
 	Tags       []string `mapstructure:"tag"`
 	Priorities []string `mapstructure:"priority"`
 	Update     bool     `mapstructure:"update"`
 }
 
-func envConfig(e envFlags) *env.LocalEnvironment {
+func envConfig(file string) *env.LocalEnvironment {
 	clusterConfig := &env.LocalEnvironment{}
-	yamlFile, err := ioutil.ReadFile(e.File)
+	yamlFile, err := ioutil.ReadFile(file)
 	if err != nil {
-		log.Fatal().Str("file", e.File).Err(err).Msg("Error loading the file")
+		log.Fatal().Str("file", file).Err(err).Msg("Error loading the file")
 	}
 	err = yaml.Unmarshal(yamlFile, &clusterConfig)
 	if err != nil {
@@ -53,12 +49,6 @@ func envConfig(e envFlags) *env.LocalEnvironment {
 
 func readEnvFlags() envFlags {
 	options := envFlags{}
-	readOptions(&options)
-	return options
-}
-
-func readAppFlags() appFlags {
-	options := appFlags{}
 	readOptions(&options)
 	return options
 }

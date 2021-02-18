@@ -17,8 +17,8 @@ func EnvStatus() *cobra.Command {
 		Long:  `Status of the environment.`,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			flags := readAppFlags()
-			envConfig := envConfig(flags.Env)
+			flags := readEnvFlags()
+			envConfig := envConfig(flags.File)
 
 			if flags.Update {
 				env.Update()

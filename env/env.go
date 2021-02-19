@@ -55,7 +55,7 @@ func Sync(app *AppItem, wg *sync.WaitGroup, forceUpgrade, wait bool) {
 			log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Force upgrade")
 		}
 	case api.AppActionInstall:
-		if _, err := helm.Install(app.Declaration, app.NextVersion.String(), wait)
+		_, err := helm.Install(app.Declaration, app.NextVersion.String(), wait)
 		if err != nil {
 			log.Error().Str("app", app.AppName).Err(err).Msg("Error install application")
 		}

@@ -68,7 +68,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/."+name+".yaml)")
-	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", zerolog.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
+	rootCmd.PersistentFlags().StringVarP(&v, "level", "v", zerolog.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
 
 	rootCmd.AddCommand(Env())
 }
@@ -100,12 +100,13 @@ func initConfig() {
 
 func setUpLogs(out io.Writer, level string) error {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	lvl, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return err
 	}
-	log.Logger = log.Level(lvl)
+	zerolog.SetGlobalLevel(lvl)
+
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: out})
 	return nil
 }

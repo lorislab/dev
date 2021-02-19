@@ -1,7 +1,9 @@
-package env
+package api
 
 //App application
 type App struct {
+	ID        string     `yaml:"-"`
+	Name      string     `yaml:"-"`
 	Namespace string     `yaml:"namespace"`
 	Tags      []string   `yaml:"tags"`
 	Helm      HelmConfig `yaml:"helm"`
@@ -13,13 +15,17 @@ type App struct {
 	}
 }
 
+//AppID application ID
+func AppID(namespace, name string) string {
+	return namespace + `-` + name
+}
+
 //HelmConfig helm configuration
 type HelmConfig struct {
-	Chart       string      `yaml:"chart"`
-	Repo        string      `yaml:"repo"`
-	Version     string      `yaml:"version"`
-	Values      interface{} `yaml:"values"`
-	ValuesFiles []string    `yaml:"files"`
+	Chart       string                 `yaml:"chart"`
+	Version     string                 `yaml:"version"`
+	Values      map[string]interface{} `yaml:"values"`
+	ValuesFiles []string               `yaml:"files"`
 }
 
 //LocalEnvironment local environment
@@ -30,19 +36,15 @@ type LocalEnvironment struct {
 	Apps map[string]*App `yaml:"apps"`
 }
 
-//Namespace namespace of the application
-func (e *LocalEnvironment) Namespace(appName string) string {
-	app, exists := e.Apps[appName]
-	if exists {
-		if len(app.Namespace) > 0 {
-			return app.Namespace
+//UpdateApplications update application namespaces
+func (e *LocalEnvironment) UpdateApplications() {
+	for name, app := range e.Apps {
+		app.Name = name
+		if len(app.Namespace) == 0 {
+			app.Namespace = e.Cluster.Namespace
 		}
+		app.ID = AppID(app.Namespace, app.Name)
 	}
-	return e.Cluster.Namespace
-}
-
-func id(namespace, name string) string {
-	return namespace + "-" + name
 }
 
 //AppAction application action

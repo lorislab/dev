@@ -3,7 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 
-	"github.com/lorislab/dev/env"
+	"github.com/lorislab/dev/pkg/api"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -34,8 +34,8 @@ type envFlags struct {
 	Update     bool     `mapstructure:"update"`
 }
 
-func envConfig(file string) *env.LocalEnvironment {
-	clusterConfig := &env.LocalEnvironment{}
+func envConfig(file string) *api.LocalEnvironment {
+	clusterConfig := &api.LocalEnvironment{}
 	yamlFile, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatal().Str("file", file).Err(err).Msg("Error loading the file")
@@ -44,6 +44,7 @@ func envConfig(file string) *env.LocalEnvironment {
 	if err != nil {
 		panic(err)
 	}
+	clusterConfig.UpdateApplications()
 	return clusterConfig
 }
 

@@ -3,6 +3,7 @@ package env
 import (
 	"strconv"
 
+	"github.com/lorislab/dev/pkg/api"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,11 +22,11 @@ func createFilter(tags, apps, priorities []string) *Filter {
 	}
 }
 
-func (f *Filter) exclude(appName string, app *App) bool {
+func (f *Filter) exclude(app *api.App) bool {
 
 	// filter app names
 	if len(f.apps) > 0 {
-		_, exists := f.apps[appName]
+		_, exists := f.apps[app.Name]
 		if !exists {
 			return true
 		}

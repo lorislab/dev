@@ -2,10 +2,11 @@ package env
 
 import (
 	"sort"
-	"strings"
+	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/lorislab/dev/helm"
+	"github.com/lorislab/dev/pkg/api"
 	"github.com/rs/zerolog/log"
 	"helm.sh/helm/v3/cmd/helm/search"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -16,12 +17,11 @@ import (
 type AppItem struct {
 	Namespace      string
 	AppName        string
-	Declaration    *App
+	Declaration    *api.App
 	CurrentVersion *semver.Version
 	NextVersion    *semver.Version
-	Action         AppAction
+	Action         api.AppAction
 	Chart          string
-	ChartRepo      string
 	Cluster        *release.Release
 	Repo           *search.Result
 }
@@ -31,8 +31,59 @@ func Update() {
 	helm.Update()
 }
 
+//Uninstall uninstall application
+func Uninstall(app *AppItem, wg *sync.WaitGroup, forceUpgrade, wait bool) {
+	defer wg.Done()
+
+	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Uninstall application started")
+	_, err := helm.Uninstall(app.Declaration, wait)
+	if err != nil {
+		log.Error().Str("app", app.AppName).Err(err).Msg("Error uninstall application")
+	}
+	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Uninstall application finished")
+}
+
+//Sync synchronize the application in the environment
+func Sync(app *AppItem, wg *sync.WaitGroup, forceUpgrade, wait bool) {
+	defer wg.Done()
+
+	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Sync application started")
+	switch app.Action {
+
+	case api.AppActionNothing:
+		if forceUpgrade {
+			log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Force upgrade")
+		}
+	case api.AppActionInstall:
+		if _, err := helm.Install(app.Declaration, app.NextVersion.String(), wait)
+		if err != nil {
+			log.Error().Str("app", app.AppName).Err(err).Msg("Error install application")
+		}
+	case api.AppActionUpgrade:
+		_, err := helm.Upgrade(app.Declaration, app.NextVersion.String(), wait)
+		if err != nil {
+			log.Error().Str("app", app.AppName).Err(err).Msg("Error upgrade application")
+		}
+	case api.AppActionDowngrade:
+		_, err := helm.Uninstall(app.Declaration, wait)
+		if err != nil {
+			log.Error().Str("app", app.AppName).Err(err).Msg("Error uninstall (downgrade) application")
+		}
+		_, err = helm.Install(app.Declaration, app.NextVersion.String(), wait)
+		if err != nil {
+			log.Error().Str("app", app.AppName).Err(err).Msg("Error install (downgrade) application")
+		}
+	case api.AppActionUninstall:
+		_, err := helm.Uninstall(app.Declaration, wait)
+		if err != nil {
+			log.Error().Str("app", app.AppName).Err(err).Msg("Error uninstall application")
+		}
+	}
+	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Sync application finished")
+}
+
 //LoadApps load applications for the environments
-func LoadApps(env *LocalEnvironment, tags, apps, priorities []string) (map[int][]*AppItem, []int) {
+func LoadApps(env *api.LocalEnvironment, tags, apps, priorities []string) (map[int][]*AppItem, []int) {
 
 	// list all releases in the cluster
 	releases := listAllReleases()
@@ -47,22 +98,19 @@ func LoadApps(env *LocalEnvironment, tags, apps, priorities []string) (map[int][
 
 	result := make(map[int][]*AppItem)
 
-	for appName, app := range env.Apps {
+	for _, app := range env.Apps {
 
 		// exclude application
-		if filter.exclude(appName, app) {
+		if filter.exclude(app) {
 			continue
 		}
 
 		// check chart repository from the definition
-		chartRepo, local := chartRepository(app)
+		// chartRepo, local := chartRepository(app)
 
 		// cluster version
-		namespace := env.Namespace(appName)
-		id := id(namespace, appName)
-
 		var currentVersion *semver.Version
-		clusterVersion, exists := releases[id]
+		clusterVersion, exists := releases[app.ID]
 		if exists {
 			currentVersion = createSemVer(clusterVersion.Chart.Metadata.Version)
 		}
@@ -70,13 +118,12 @@ func LoadApps(env *LocalEnvironment, tags, apps, priorities []string) (map[int][
 		// repository version
 		var nextVersion *semver.Version
 		var repoVersion *search.Result
-		if local {
-			nextVersion = localChartVersion(chartRepo, app.Helm.Version)
+		repoVersions, exists := searchResults[app.Helm.Chart]
+		if exists {
+			nextVersion, repoVersion = findLatestBaseOnTheConstraints(repoVersions, app.Helm.Version)
 		} else {
-			repoVersions, exists := searchResults[chartRepo]
-			if exists {
-				nextVersion, repoVersion = findLatestBaseOnTheConstraints(repoVersions, app.Helm.Version)
-			}
+			//check local directory
+			nextVersion = localChartVersion(app.Helm.Chart, app.Helm.Version)
 		}
 
 		// create action
@@ -84,14 +131,13 @@ func LoadApps(env *LocalEnvironment, tags, apps, priorities []string) (map[int][
 
 		// create application item
 		appItem := &AppItem{
-			AppName:        appName,
-			Namespace:      namespace,
+			AppName:        app.Name,
+			Namespace:      app.Namespace,
 			Declaration:    app,
 			Cluster:        clusterVersion,
 			CurrentVersion: currentVersion,
 			Action:         action,
 			Chart:          app.Helm.Chart,
-			ChartRepo:      chartRepo,
 			NextVersion:    nextVersion,
 			Repo:           repoVersion,
 		}
@@ -119,7 +165,7 @@ func listAllReleases() map[string]*release.Release {
 		log.Fatal().Err(err).Msg("Error load list of all releases")
 	}
 	for _, item := range items {
-		result[id(item.Namespace, item.Name)] = item
+		result[api.AppID(item.Namespace, item.Name)] = item
 	}
 	return result
 }
@@ -165,7 +211,8 @@ func localChartVersion(repo string, constraints string) *semver.Version {
 
 	chart, err := loader.Load(repo)
 	if err != nil {
-		log.Fatal().Err(err).Str("repo", repo).Msg("Error loading the local helm chart")
+		log.Error().Err(err).Str("repo", repo).Msg("Error loading the local helm chart")
+		return nil
 	}
 	version := createSemVer(chart.Metadata.Version)
 
@@ -183,18 +230,6 @@ func createConstraints(constraints string) *semver.Constraints {
 	return c
 }
 
-func chartRepository(app *App) (string, bool) {
-	chartRepo := app.Helm.Chart
-	local := false
-	if strings.HasPrefix(app.Helm.Repo, "alias:") {
-		chartRepo = strings.TrimPrefix(app.Helm.Repo, "alias:") + "/" + chartRepo
-	} else if strings.HasPrefix(app.Helm.Repo, "file://") {
-		chartRepo = strings.TrimPrefix(app.Helm.Repo, "file://")
-		local = true
-	}
-	return chartRepo, local
-}
-
 func createSemVer(version string) *semver.Version {
 	tmp, err := semver.NewVersion(version)
 	if err != nil {
@@ -203,18 +238,18 @@ func createSemVer(version string) *semver.Version {
 	return tmp
 }
 
-func createAction(currentVersion, nextVersion *semver.Version) AppAction {
+func createAction(currentVersion, nextVersion *semver.Version) api.AppAction {
 	if nextVersion == nil {
-		return AppActionNotFound
+		return api.AppActionNotFound
 	}
 	if currentVersion == nil {
-		return AppActionInstall
+		return api.AppActionInstall
 	}
 	if currentVersion.Equal(nextVersion) {
-		return AppActionNothing
+		return api.AppActionNothing
 	}
 	if currentVersion.LessThan(nextVersion) {
-		return AppActionUpgrade
+		return api.AppActionUpgrade
 	}
-	return AppActionDowngrade
+	return api.AppActionDowngrade
 }

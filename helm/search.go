@@ -9,14 +9,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"helm.sh/helm/v3/cmd/helm/search"
-	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/helmpath"
 	"helm.sh/helm/v3/pkg/repo"
 )
 
 const searchMaxScore = 25
-
-var settings = cli.New()
 
 //Search helm search
 func Search() ([]*search.Result, error) {

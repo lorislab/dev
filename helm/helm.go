@@ -13,6 +13,8 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/getter"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/rest"
 	yaml2 "sigs.k8s.io/yaml"
 )
 
@@ -40,11 +42,28 @@ func mergeMaps(a, b map[string]interface{}) map[string]interface{} {
 func newActionConfig(namespace string) (*action.Configuration, error) {
 
 	cfg := &action.Configuration{}
-	if err := cfg.Init(settings.RESTClientGetter(), namespace, os.Getenv("HELM_DRIVER"), debug); err != nil {
+
+	c, err := settings.RESTClientGetter().ToRESTConfig()
+	if err != nil {
+		log.Error().Err(err).Msg("Error create kube rest config")
+		return nil, err
+	}
+	restClientGetter := newConfigFlags(c, namespace)
+
+	if err := cfg.Init(restClientGetter, namespace, os.Getenv("HELM_DRIVER"), debug); err != nil {
 		log.Error().Err(err).Msg("Error create action config")
 		return nil, err
 	}
 	return cfg, nil
+}
+
+func newConfigFlags(config *rest.Config, namespace string) *genericclioptions.ConfigFlags {
+	return &genericclioptions.ConfigFlags{
+		Namespace:   &namespace,
+		APIServer:   &config.Host,
+		CAFile:      &config.CAFile,
+		BearerToken: &config.BearerToken,
+	}
 }
 
 func debug(format string, v ...interface{}) {

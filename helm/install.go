@@ -24,9 +24,13 @@ func Install(app *api.App, version string, wait bool) (*release.Release, error) 
 	client.Version = version
 	client.Wait = wait
 	client.ReleaseName = app.Name
+	client.CreateNamespace = true
 
 	// chart request
 	chartRequested, err := chartRequest(client.ChartPathOptions, app)
+	if err != nil {
+		return nil, err
+	}
 
 	// values
 	vals, err := chartValues(app)
@@ -43,6 +47,7 @@ func createClient(namespace string) (*action.Install, error) {
 		return nil, err
 	}
 	client := action.NewInstall(cfg)
+	client.Namespace = namespace
 	client.CreateNamespace = false
 	client.DryRun = false
 	client.DisableHooks = false

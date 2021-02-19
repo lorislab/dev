@@ -31,7 +31,7 @@ func EnvStatus() *cobra.Command {
 			apps, keys := env.LoadApps(envConfig, flags.Tags, flags.Apps, flags.Priorities)
 			for _, key := range keys {
 				for _, app := range apps[key] {
-					table.AddRow(app.Declaration.Priority, app.Declaration.Helm.Chart, app.AppName, app.Namespace, app.Declaration.Helm.Version, app.CurrentVersion, app.NextVersion, app.Action.String())
+					table.AddRow(app.Declaration.Priority, app.Declaration.Helm.Chart, app.Declaration.Name, app.Declaration.Namespace, app.Declaration.Helm.Version, app.CurrentVersion, app.NextVersion, app.Action.String())
 				}
 			}
 			fmt.Println(table)

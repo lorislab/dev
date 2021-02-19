@@ -15,8 +15,6 @@ import (
 
 //AppItem application item
 type AppItem struct {
-	Namespace      string
-	AppName        string
 	Declaration    *api.App
 	CurrentVersion *semver.Version
 	NextVersion    *semver.Version
@@ -35,51 +33,51 @@ func Update() {
 func Uninstall(app *AppItem, wg *sync.WaitGroup, forceUpgrade, wait bool) {
 	defer wg.Done()
 
-	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Uninstall application started")
+	log.Info().Str("app", app.Declaration.Name).Str("action", app.Action.String()).Str("namespace", app.Declaration.Namespace).Msg("Uninstall application started")
 	_, err := helm.Uninstall(app.Declaration, wait)
 	if err != nil {
-		log.Error().Str("app", app.AppName).Err(err).Msg("Error uninstall application")
+		log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error uninstall application")
 	}
-	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Uninstall application finished")
+	log.Info().Str("app", app.Declaration.Name).Str("action", app.Action.String()).Str("namespace", app.Declaration.Namespace).Msg("Uninstall application finished")
 }
 
 //Sync synchronize the application in the environment
 func Sync(app *AppItem, wg *sync.WaitGroup, forceUpgrade, wait bool) {
 	defer wg.Done()
 
-	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Sync application started")
+	log.Info().Str("app", app.Declaration.Name).Str("namespace", app.Declaration.Namespace).Str("action", app.Action.String()).Msg("Sync application started")
 	switch app.Action {
 
 	case api.AppActionNothing:
 		if forceUpgrade {
-			log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Force upgrade")
+			log.Info().Str("app", app.Declaration.Name).Str("action", app.Action.String()).Msg("Force upgrade")
 		}
 	case api.AppActionInstall:
 		_, err := helm.Install(app.Declaration, app.NextVersion.String(), wait)
 		if err != nil {
-			log.Error().Str("app", app.AppName).Err(err).Msg("Error install application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error install application")
 		}
 	case api.AppActionUpgrade:
 		_, err := helm.Upgrade(app.Declaration, app.NextVersion.String(), wait)
 		if err != nil {
-			log.Error().Str("app", app.AppName).Err(err).Msg("Error upgrade application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error upgrade application")
 		}
 	case api.AppActionDowngrade:
 		_, err := helm.Uninstall(app.Declaration, wait)
 		if err != nil {
-			log.Error().Str("app", app.AppName).Err(err).Msg("Error uninstall (downgrade) application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error uninstall (downgrade) application")
 		}
 		_, err = helm.Install(app.Declaration, app.NextVersion.String(), wait)
 		if err != nil {
-			log.Error().Str("app", app.AppName).Err(err).Msg("Error install (downgrade) application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error install (downgrade) application")
 		}
 	case api.AppActionUninstall:
 		_, err := helm.Uninstall(app.Declaration, wait)
 		if err != nil {
-			log.Error().Str("app", app.AppName).Err(err).Msg("Error uninstall application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error uninstall application")
 		}
 	}
-	log.Info().Str("app", app.AppName).Str("action", app.Action.String()).Msg("Sync application finished")
+	log.Info().Str("app", app.Declaration.Name).Str("namespace", app.Declaration.Namespace).Str("action", app.Action.String()).Msg("Sync application finished")
 }
 
 //LoadApps load applications for the environments
@@ -131,8 +129,6 @@ func LoadApps(env *api.LocalEnvironment, tags, apps, priorities []string) (map[i
 
 		// create application item
 		appItem := &AppItem{
-			AppName:        app.Name,
-			Namespace:      app.Namespace,
 			Declaration:    app,
 			Cluster:        clusterVersion,
 			CurrentVersion: currentVersion,

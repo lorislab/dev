@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/lorislab/dev/env"
+	"github.com/lorislab/dev/pkg/api"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,7 @@ func EnvUninstall() *cobra.Command {
 					count++
 					sum++
 					wg.Add(1)
+					app.Action = api.AppActionUninstall
 					go env.Uninstall(app, &wg, true, false)
 				}
 				wg.Wait()

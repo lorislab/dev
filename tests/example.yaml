@@ -7,16 +7,14 @@ apps:
     priority: -10
     helm:
       version: ">=0.0.0-0"
-      chart: before
-      repo: file://./before
+      chart: ./before
   after:
     tags:
       - after
     priority: 100
     helm:
       version: ">=0.0.0-0"
-      chart: after
-      repo: file://./after
+      chart: ./after
       values:
         routes:
           ping-quarkus: {}
@@ -27,8 +25,7 @@ apps:
     priority: -5
     helm:
       version: ">=0.0.0-0"
-      chart: adminer
-      repo: alias:1000kit
+      chart: 1000kit/adminer
       values:
         routing:
           enabled: false
@@ -38,8 +35,7 @@ apps:
     priority: -5
     helm:  
       version: "3.4.0"
-      chart: postgresql
-      repo: alias:1000kit
+      chart: 1000kit/postgresql
       values:
         routing:
           enabled: false
@@ -63,8 +59,7 @@ apps:
     tags:
       - tests
     helm:
-      chart: ping-quarkus
-      repo: alias:1000kit
+      chart: 1000kit/ping-quarkus
       version: ">=0.0.0-0"
       values:
         test: value

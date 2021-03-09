@@ -38,10 +38,5 @@ func EnvStatus() *cobra.Command {
 		},
 	}
 
-	addStringSliceFlag(cmd, "tag", "", []string{}, "comma separated list of tags")
-	addStringSliceFlag(cmd, "priority", "", []string{}, "comma separated list of priorities")
-	addStringSliceFlag(cmd, "app", "", []string{}, "application name for the action")
-	addBoolFlag(cmd, "update", "", false, "update repositories before sync")
-
 	return cmd
 }

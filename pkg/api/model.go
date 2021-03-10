@@ -8,11 +8,6 @@ type App struct {
 	Tags      []string   `yaml:"tags"`
 	Helm      HelmConfig `yaml:"helm"`
 	Priority  int        `yaml:"priority"`
-	Ingress   struct {
-		Enabled bool   `yaml:"enabled"`
-		Host    bool   `yaml:"host"`
-		Path    string `yaml:"path"`
-	}
 }
 
 //AppID application ID
@@ -24,16 +19,27 @@ func AppID(namespace, name string) string {
 type HelmConfig struct {
 	Chart       string                 `yaml:"chart"`
 	Version     string                 `yaml:"version"`
+	NoWait      bool                   `yaml:"nowait"`
 	Values      map[string]interface{} `yaml:"values"`
 	ValuesFiles []string               `yaml:"files"`
 }
 
+//HelmCluster helm cluster configuration
+type HelmCluster struct {
+	Values      map[string]interface{} `yaml:"values"`
+	ValuesFiles []string               `yaml:"files"`
+}
+
+//Cluster configuration
+type Cluster struct {
+	Namespace string      `yaml:"namespace"`
+	Helm      HelmCluster `yaml:"helm"`
+}
+
 //LocalEnvironment local environment
 type LocalEnvironment struct {
-	Cluster struct {
-		Namespace string `yaml:"namespace"`
-	} `yaml:"cluster"`
-	Apps map[string]*App `yaml:"apps"`
+	Cluster Cluster         `yaml:"cluster"`
+	Apps    map[string]*App `yaml:"apps"`
 }
 
 //UpdateApplications update application namespaces

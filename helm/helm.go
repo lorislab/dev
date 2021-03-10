@@ -98,9 +98,12 @@ func chartRequest(chartOptions action.ChartPathOptions, app *api.App) (*chart.Ch
 	return chartRequested, nil
 }
 
-func chartValues(app *api.App) (map[string]interface{}, error) {
+func chartValues(app *api.App, hc *api.HelmCluster) (map[string]interface{}, error) {
 	p := getter.All(settings)
 	vf := []string{}
+	if len(hc.ValuesFiles) > 0 {
+		vf = append(vf, hc.ValuesFiles...)
+	}
 	if len(app.Helm.ValuesFiles) > 0 {
 		vf = append(vf, app.Helm.ValuesFiles...)
 	}
@@ -112,21 +115,36 @@ func chartValues(app *api.App) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	// add cluster values
+	if len(hc.Values) > 0 {
+		vals = mergeMaps(vals, hc.Values)
+	}
+
 	// add embedded values
-	if app.Helm.Values != nil {
-		tmp := app.Helm.Values
-		bytes, err := yaml.Marshal(&tmp)
+	// convert values from configuration to values structure for merge
+	if len(app.Helm.Values) > 0 {
+		em, err := ConvertYamlMap(app.Helm.Values)
 		if err != nil {
-			log.Error().Err(err).Str("app", app.Name).Msg("Error marschale values")
-			return nil, err
-		}
-		em := map[string]interface{}{}
-		if err := yaml2.Unmarshal(bytes, &em); err != nil {
-			log.Error().Err(err).Str("app", app.Name).Msg("Error unmarschale values")
+			log.Error().Err(err).Str("app", app.Name).Msg("Error convert values")
 			return nil, err
 		}
 		vals = mergeMaps(vals, em)
 	}
 
 	return vals, nil
+}
+
+//ConvertYamlMap convert yaml map to structure map
+func ConvertYamlMap(tmp map[string]interface{}) (map[string]interface{}, error) {
+	bytes, err := yaml.Marshal(&tmp)
+	if err != nil {
+		log.Error().Err(err).Msg("Error marschale values")
+		return nil, err
+	}
+	em := map[string]interface{}{}
+	if err := yaml2.Unmarshal(bytes, &em); err != nil {
+		log.Error().Err(err).Msg("Error unmarschale values")
+		return nil, err
+	}
+	return em, nil
 }

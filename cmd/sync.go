@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"sync"
-
 	"github.com/lorislab/dev/env"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -29,24 +27,12 @@ func EnvSync() *cobra.Command {
 
 			apps, priorities := env.LoadApps(envConfig, flags.Env.Tags, flags.Env.Apps, flags.Env.Priorities)
 
-			count := 0
-			sum := 0
-
-			for _, priority := range priorities {
-				var wg sync.WaitGroup
-				count = 0
-
-				for _, app := range apps[priority] {
-					count++
-					sum++
-					wg.Add(1)
-					go env.Sync(app, &wg, flags.ForceUpdate, true)
-				}
-				wg.Wait()
-
-				log.Info().Int("count", count).Int("sum", sum).Int("priority", priority).Msg("Sync apps finished")
+			log.Info().Int("priorities", len(priorities)).Msg("Synchronize all applications started.")
+			sum, err := env.SyncApps(envConfig, apps, priorities, flags.ForceUpdate)
+			if err != nil {
+				log.Error().Err(err).Msg("Error synchronize applications!")
 			}
-			log.Info().Int("sum", sum).Msg("Sync apps finished.")
+			log.Info().Int("sum", sum).Msg("Synchronize all applications finished.")
 		},
 	}
 

@@ -14,7 +14,7 @@ import (
 )
 
 //Install install application
-func Install(app *api.App, version string, wait bool) (*release.Release, error) {
+func Install(hc *api.HelmCluster, app *api.App, version string, wait bool) (*release.Release, error) {
 
 	client, err := createClient(app.Namespace)
 	if err != nil {
@@ -33,7 +33,7 @@ func Install(app *api.App, version string, wait bool) (*release.Release, error) 
 	}
 
 	// values
-	vals, err := chartValues(app)
+	vals, err := chartValues(app, hc)
 	if err != nil {
 		return nil, err
 	}

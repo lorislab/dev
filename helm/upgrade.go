@@ -9,7 +9,7 @@ import (
 )
 
 //Upgrade upgrade application
-func Upgrade(app *api.App, version string, wait bool) (*release.Release, error) {
+func Upgrade(hc *api.HelmCluster, app *api.App, version string, wait bool) (*release.Release, error) {
 	client, err := createUpgradeClient(app.Namespace)
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func Upgrade(app *api.App, version string, wait bool) (*release.Release, error) 
 	}
 
 	// values
-	vals, err := chartValues(app)
+	vals, err := chartValues(app, hc)
 	if err != nil {
 		return nil, err
 	}

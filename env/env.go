@@ -41,47 +41,86 @@ func Uninstall(app *AppItem, wg *sync.WaitGroup, forceUpgrade, wait bool) {
 	log.Info().Str("app", app.Declaration.Name).Str("action", app.Action.String()).Str("namespace", app.Declaration.Namespace).Msg("Uninstall application finished")
 }
 
+//SyncApps synchronize the applications
+func SyncApps(env *api.LocalEnvironment, apps map[int][]*AppItem, priorities []int, forceUpdate bool) (int, error) {
+	count := 0
+	sum := 0
+
+	hc := &api.HelmCluster{
+		ValuesFiles: env.Cluster.Helm.ValuesFiles,
+	}
+
+	// convert values from configuration to values structure for merge
+	if len(env.Cluster.Helm.Values) > 0 {
+		tmp, err := helm.ConvertYamlMap(env.Cluster.Helm.Values)
+		if err != nil {
+			log.Error().Err(err).Msg("Error convert cluster helm values")
+			return 0, err
+		}
+		hc.Values = tmp
+	}
+
+	for _, priority := range priorities {
+		var wg sync.WaitGroup
+		count = 0
+		log.Info().Msgf("--------> Priority: %d", priority)
+		log.Info().Int("count", count).Int("sum", sum).Int("priority", priority).Msg("Synchronize group applications started.")
+		for _, app := range apps[priority] {
+			count++
+			sum++
+			wg.Add(1)
+			go Sync(hc, app, &wg, forceUpdate)
+		}
+		wg.Wait()
+		log.Info().Int("count", count).Int("sum", sum).Int("priority", priority).Msg("Synchronize group applications finished.")
+	}
+	log.Info().Msgf("--------> DONE!")
+	return count, nil
+}
+
 //Sync synchronize the application in the environment
-func Sync(app *AppItem, wg *sync.WaitGroup, forceUpgrade, wait bool) {
+func Sync(hc *api.HelmCluster, app *AppItem, wg *sync.WaitGroup, forceUpgrade bool) {
 	defer wg.Done()
 
-	log.Info().Str("app", app.Declaration.Name).Str("namespace", app.Declaration.Namespace).Str("action", app.Action.String()).Msg("Sync application started")
+	wait := !app.Declaration.Helm.NoWait
+
+	log.Info().Str("app", app.Declaration.Name).Str("namespace", app.Declaration.Namespace).Str("action", app.Action.String()).Msg("Sync application started.")
 	switch app.Action {
 
 	case api.AppActionNothing:
 		if forceUpgrade {
-			log.Info().Str("app", app.Declaration.Name).Str("action", app.Action.String()).Msg("Force upgrade")
-			_, err := helm.Upgrade(app.Declaration, app.NextVersion.String(), wait)
+			log.Info().Str("app", app.Declaration.Name).Str("action", app.Action.String()).Msg("Force upgrade.")
+			_, err := helm.Upgrade(hc, app.Declaration, app.NextVersion.String(), wait)
 			if err != nil {
-				log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error upgrade application")
+				log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error upgrade application.")
 			}
 		}
 	case api.AppActionInstall:
-		_, err := helm.Install(app.Declaration, app.NextVersion.String(), wait)
+		_, err := helm.Install(hc, app.Declaration, app.NextVersion.String(), wait)
 		if err != nil {
-			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error install application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error install application.")
 		}
 	case api.AppActionUpgrade:
-		_, err := helm.Upgrade(app.Declaration, app.NextVersion.String(), wait)
+		_, err := helm.Upgrade(hc, app.Declaration, app.NextVersion.String(), wait)
 		if err != nil {
-			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error upgrade application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error upgrade application.")
 		}
 	case api.AppActionDowngrade:
 		_, err := helm.Uninstall(app.Declaration, wait)
 		if err != nil {
-			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error uninstall (downgrade) application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error uninstall (downgrade) application.")
 		}
-		_, err = helm.Install(app.Declaration, app.NextVersion.String(), wait)
+		_, err = helm.Install(hc, app.Declaration, app.NextVersion.String(), wait)
 		if err != nil {
-			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error install (downgrade) application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error install (downgrade) application.")
 		}
 	case api.AppActionUninstall:
 		_, err := helm.Uninstall(app.Declaration, wait)
 		if err != nil {
-			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error uninstall application")
+			log.Error().Str("app", app.Declaration.Name).Err(err).Msg("Error uninstall application.")
 		}
 	}
-	log.Info().Str("app", app.Declaration.Name).Str("namespace", app.Declaration.Namespace).Str("action", app.Action.String()).Msg("Sync application finished")
+	log.Info().Str("app", app.Declaration.Name).Str("namespace", app.Declaration.Namespace).Str("action", app.Action.String()).Msg("Sync application finished.")
 }
 
 //LoadApps load applications for the environments
